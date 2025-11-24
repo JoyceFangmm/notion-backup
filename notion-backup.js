@@ -9,10 +9,13 @@ let axios = require('axios')
   , { join } = require('path')
   , notionAPI = 'https://www.notion.so/api/v3'
   , { NOTION_TOKEN, NOTION_FILE_TOKEN, NOTION_SPACE_ID } = process.env
+  , { NOTION_USER_ID, NOTION_DATABASE_ID } = process.env
   , client = axios.create({
       baseURL: notionAPI,
       headers: {
-        Cookie: `token_v2=${NOTION_TOKEN}; file_token=${NOTION_FILE_TOKEN}`
+        Cookie: `token_v2=${NOTION_TOKEN}; file_token=${NOTION_FILE_TOKEN}`,
+        'x-notion-active-user-header': `${NOTION_USER_ID}`,
+        'x-notion-space-id': `${NOTION_SPACE_ID}`
       },
     })
   , die = (str) => {
@@ -37,21 +40,41 @@ async function sleep (seconds) {
   });
 }
 
+
+const { v4: uuidv4 } = require('uuid'); // 导入 uuid v4
+
 // formats: markdown, html
 async function exportFromNotion (format) {
   try {
     let { data: { taskId } } = await post('enqueueTask', {
       task: {
-        eventName: 'exportSpace',
+        eventName: 'partitionedExportBlock',
         request: {
-          spaceId: NOTION_SPACE_ID,
+          block: {
+            id: `${NOTION_DATABASE_ID}`, // databse_id
+            spaceId: `${NOTION_SPACE_ID}`
+          },
+          recursive: true,
           exportOptions: {
             exportType: format,
-            timeZone: 'America/New_York',
+            timeZone: 'Asia/Shanghai',
             locale: 'en',
+            collectionViewExportType: 'currentView',
+            includeContents: 'everything',
+            preferredViewMap: {
+              // 复制链接上的ID和v参数
+              // '2b06eee2-1da0-8008-aa70-d52e0bbe2ede': '2b06eee2-1da0-807c-8065-000cb31772a2'
+            }
           },
-          shouldExportComments: false
+          shouldExportComments: false,
+          eventName: 'partitionedExportBlock',
+          rootTaskId: uuidv4()
         },
+        cellRouting: {
+          spaceIds: [
+            `${NOTION_SPACE_ID}`
+          ]
+        }
       },
     });
     console.warn(`Enqueued task ${taskId}`);

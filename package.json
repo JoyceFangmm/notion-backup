@@ -29,6 +29,7 @@
     "commander": "^7.2.0",
     "extract-zip": "^2.0.1",
     "notion-client": "^4.5.2",
-    "notion-utils": "^4.5.2"
+    "notion-utils": "^4.5.2",
+    "uuid": "^7.0.3"
   }
 }
