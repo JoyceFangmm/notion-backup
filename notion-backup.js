@@ -48,12 +48,9 @@ async function exportFromNotion (format) {
   try {
     let { data: { taskId } } = await post('enqueueTask', {
       task: {
-        eventName: 'partitionedExportBlock',
+        eventName: 'partitionedExportSpace',
         request: {
-          block: {
-            id: `${NOTION_DATABASE_ID}`, // databse_id
-            spaceId: `${NOTION_SPACE_ID}`
-          },
+          spaceId: `${NOTION_SPACE_ID}`,
           recursive: true,
           exportOptions: {
             exportType: format,
@@ -62,12 +59,10 @@ async function exportFromNotion (format) {
             collectionViewExportType: 'currentView',
             includeContents: 'everything',
             preferredViewMap: {
-              // 复制链接上的ID和v参数
-              // '2b06eee2-1da0-8008-aa70-d52e0bbe2ede': '2b06eee2-1da0-807c-8065-000cb31772a2'
             }
           },
           shouldExportComments: false,
-          eventName: 'partitionedExportBlock',
+          eventName: 'partitionedExportSpace',
           rootTaskId: uuidv4()
         },
         cellRouting: {
