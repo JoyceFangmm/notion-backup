@@ -41,14 +41,12 @@ async function sleep (seconds) {
 }
 
 
-const { v4: uuidv4 } = require('uuid'); // 导入 uuid v4
-
 // formats: markdown, html
 async function exportFromNotion (format) {
   try {
     let { data: { taskId } } = await post('enqueueTask', {
       task: {
-        eventName: 'partitionedExportSpace',
+        eventName: 'exportSpace',
         request: {
           spaceId: `${NOTION_SPACE_ID}`,
           recursive: true,
@@ -62,12 +60,9 @@ async function exportFromNotion (format) {
             }
           },
           shouldExportComments: false,
-          eventName: 'partitionedExportSpace',
-          rootTaskId: uuidv4()
         },
         cellRouting: {
           spaceIds: [
-            `${NOTION_SPACE_ID}`
           ]
         }
       },
@@ -75,6 +70,7 @@ async function exportFromNotion (format) {
     console.warn(`Enqueued task ${taskId}`);
     let failCount = 0
       , exportURL
+      , hasSuccessed = false
     ;
     while (true) {
       if (failCount >= 5) break;
@@ -90,22 +86,54 @@ async function exportFromNotion (format) {
         console.warn(`No task, waiting.`);
         continue;
       }
-      if (!task.status) {
-        failCount++;
-        console.warn(`No task status, waiting. Task was:\n${JSON.stringify(task, null, 2)}`);
-        continue;
-      }
-      if (task.state === 'in_progress') console.warn(`Pages exported: ${task.status.pagesExported}`);
-      if (task.state === 'failure') {
-        failCount++;
-        console.warn(`Task error: ${task.error}`);
-        continue;
-      }
       if (task.state === 'success') {
-        exportURL = task.status.exportURL;
+        hasSuccessed = true;
         break;
       }
     }
+
+    if (!hasSuccessed) {
+      console.warn('No Download link');
+      return;
+    }
+
+
+    let response = await post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' });
+      let { activity } = response.data.recordMap;
+
+      // eslint-disable-next-line guard-for-in
+      for (const key in activity) {
+        const el = activity[key];
+        if (el.value.space_id === `${NOTION_SPACE_ID}`) {
+          if (el.value.type === 'export-completed') {
+            console.warn('el.value.type->', el.value.type);
+            let { edits } = el.value;
+            // eslint-disable-next-line guard-for-in
+            for (const k in edits) {
+              const it = edits[k];
+              if (it.type === 'export-completed' && it.space_id === `${NOTION_SPACE_ID}`) {
+                exportURL = it.link;
+                break;
+              }
+            }
+          }
+          break;
+        }
+      }
+
+    if (!exportURL) {
+      console.warn('No Download link');
+      return;
+    }
+
+    const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
+    console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
+    const curr = Date.now();
+    if (Number(timestamp) < curr) {
+      console.warn('链接过期了');
+      return;
+    }
+
     let res = await client({
       method: 'GET',
       url: exportURL,
