@@ -111,7 +111,7 @@ async function exportFromNotion (format) {
         async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
       );
 
-      // console.warn('数据获取成功', response);
+      console.warn('数据获取成功', response.data, JSON.stringify(response.data));
 
       let { activity } = response.data.recordMap;
 
@@ -171,6 +171,10 @@ async function exportFromNotion (format) {
       } else {
         break;
       }
+    }
+
+    if (!exportURL) {
+      throw new Error('最终未找到正确的链接');
     }
 
 
