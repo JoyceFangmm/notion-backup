@@ -68,10 +68,12 @@ async function exportFromNotion (format) {
       },
     });
     console.warn(`Enqueued task ${taskId}`);
+
     let failCount = 0
       , exportURL
       , hasSuccessed = false
     ;
+    // 创建任务
     while (true) {
       if (failCount >= 5) break;
       await sleep(10);
@@ -97,13 +99,28 @@ async function exportFromNotion (format) {
       return;
     }
 
+    failCount = 0;
+    // 获取消息通知里面的下载链接
+    while (true) {
+      console.warn('Waiting for export to complete...');
+      if (failCount >= 5) break;
+      await sleep(20);
 
-    let response = await post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' });
+      let response = await retry(
+        { times: 2, interval: 5000 },
+        async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
+      );
+
+      console.warn('数据获取成功', JSON.stringify(response.data));
+
       let { activity } = response.data.recordMap;
+
+      console.warn('activity->', JSON.stringify(activity));
 
       // eslint-disable-next-line guard-for-in
       for (const key in activity) {
         const el = activity[key];
+        console.warn('el.value->', JSON.stringify(el.value));
         if (el.value.space_id === `${NOTION_SPACE_ID}`) {
           if (el.value.type === 'export-completed') {
             console.warn('el.value.type->', el.value.type);
@@ -113,26 +130,53 @@ async function exportFromNotion (format) {
               const it = edits[k];
               if (it.type === 'export-completed' && it.space_id === `${NOTION_SPACE_ID}`) {
                 exportURL = it.link;
-                break;
+                // 判断链接是否过期
+                const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
+                console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
+                const curr = Date.now();
+                if (Number(timestamp) <= curr) {
+                  console.warn('链接过期了，waiting...');
+                  exportURL = null;
+                  continue;
+                } else {
+                  break;
+                }
               }
             }
+
+            if (exportURL) {
+              console.warn(`获取链接成功：${exportURL}`);
+              break;
+            } else {
+              console.warn(`未找到正确链接，继续for循环`);
+              continue;
+            }
           }
-          break;
         }
       }
 
-    if (!exportURL) {
-      console.warn('No Download link');
-      return;
+      if (!exportURL) {
+        failCount++;
+        console.warn(`No link, waiting.`);
+        continue;
+      }
+
+      const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
+      console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
+      const curr = Date.now();
+      if (Number(timestamp) < curr) {
+        failCount++;
+        console.warn('链接过期了，waiting...');
+        continue;
+      } else {
+        break;
+      }
     }
 
-    const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
-    console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
-    const curr = Date.now();
-    if (Number(timestamp) < curr) {
-      console.warn('链接过期了');
-      return;
+    if (!exportURL) {
+      throw new Error('最终未找到正确的链接');
     }
+
 
     let res = await client({
       method: 'GET',
