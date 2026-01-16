@@ -115,6 +115,8 @@ async function exportFromNotion (format) {
 
       let { activity } = response.data.recordMap;
 
+      console.warn('activity->', activity, JSON.stringify(activity));
+
       // eslint-disable-next-line guard-for-in
       for (const key in activity) {
         const el = activity[key];
