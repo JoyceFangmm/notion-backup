@@ -68,10 +68,12 @@ async function exportFromNotion (format) {
       },
     });
     console.warn(`Enqueued task ${taskId}`);
+
     let failCount = 0
       , exportURL
       , hasSuccessed = false
     ;
+    // 创建任务
     while (true) {
       if (failCount >= 5) break;
       await sleep(10);
@@ -97,8 +99,18 @@ async function exportFromNotion (format) {
       return;
     }
 
+    failCount = 0;
+    // 获取消息通知里面的下载链接
+    while (true) {
+      console.warn('Waiting for export to complete...');
+      if (failCount >= 2) break;
+      await sleep(10);
 
-    let response = await post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' });
+      let response = await retry(
+        { times: 2, interval: 2000 },
+        async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
+      );
+
       let { activity } = response.data.recordMap;
 
       // eslint-disable-next-line guard-for-in
@@ -121,18 +133,22 @@ async function exportFromNotion (format) {
         }
       }
 
-    if (!exportURL) {
-      console.warn('No Download link');
-      return;
+      if (!exportURL) {
+        failCount++;
+        console.warn(`No link, waiting.`);
+        continue;
+      }
+
+      const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
+      console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
+      const curr = Date.now();
+      if (Number(timestamp) < curr) {
+        failCount++;
+        console.warn('链接过期了，waiting...');
+        continue;
+      }
     }
 
-    const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
-    console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
-    const curr = Date.now();
-    if (Number(timestamp) < curr) {
-      console.warn('链接过期了');
-      return;
-    }
 
     let res = await client({
       method: 'GET',
