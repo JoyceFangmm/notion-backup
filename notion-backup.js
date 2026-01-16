@@ -107,7 +107,7 @@ async function exportFromNotion (format) {
       await sleep(10);
 
       let response = await retry(
-        { times: 2, interval: 2000 },
+        { times: 2, interval: 5000 },
         async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
       );
 
