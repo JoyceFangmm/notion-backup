@@ -103,8 +103,8 @@ async function exportFromNotion (format) {
     // 获取消息通知里面的下载链接
     while (true) {
       console.warn('Waiting for export to complete...');
-      if (failCount >= 3) break;
-      await sleep(10);
+      if (failCount >= 5) break;
+      await sleep(20);
 
       let response = await retry(
         { times: 2, interval: 5000 },
