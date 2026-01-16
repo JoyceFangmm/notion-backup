@@ -111,6 +111,8 @@ async function exportFromNotion (format) {
         async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
       );
 
+      console.warn('数据获取成功', response);
+
       let { activity } = response.data.recordMap;
 
       // eslint-disable-next-line guard-for-in
@@ -139,8 +141,11 @@ async function exportFromNotion (format) {
                 }
               }
             }
+
+            if (exportURL) {
+              break;
+            }
           }
-          break;
         }
       }
 
@@ -157,6 +162,8 @@ async function exportFromNotion (format) {
         failCount++;
         console.warn('链接过期了，waiting...');
         continue;
+      } else {
+        break;
       }
     }
 
