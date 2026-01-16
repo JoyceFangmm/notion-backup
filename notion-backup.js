@@ -118,6 +118,7 @@ async function exportFromNotion (format) {
       // eslint-disable-next-line guard-for-in
       for (const key in activity) {
         const el = activity[key];
+        console.warn('el.value->', el.value, JSON.stringify(el.value));
         if (el.value.space_id === `${NOTION_SPACE_ID}`) {
           if (el.value.type === 'export-completed') {
             console.warn('el.value.type->', el.value.type);
@@ -132,7 +133,6 @@ async function exportFromNotion (format) {
                 console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
                 const curr = Date.now();
                 if (Number(timestamp) <= curr) {
-                  failCount++;
                   console.warn('链接过期了，waiting...');
                   exportURL = null;
                   continue;
@@ -143,7 +143,11 @@ async function exportFromNotion (format) {
             }
 
             if (exportURL) {
+              console.warn(`获取链接成功：${exportURL}`);
               break;
+            } else {
+              console.warn(`未找到正确链接，继续for循环`);
+              continue;
             }
           }
         }
