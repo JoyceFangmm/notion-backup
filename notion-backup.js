@@ -125,7 +125,18 @@ async function exportFromNotion (format) {
               const it = edits[k];
               if (it.type === 'export-completed' && it.space_id === `${NOTION_SPACE_ID}`) {
                 exportURL = it.link;
-                break;
+                // 判断链接是否过期
+                const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
+                console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
+                const curr = Date.now();
+                if (Number(timestamp) <= curr) {
+                  failCount++;
+                  console.warn('链接过期了，waiting...');
+                  exportURL = null;
+                  continue;
+                } else {
+                  break;
+                }
               }
             }
           }
