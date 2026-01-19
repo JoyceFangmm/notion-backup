@@ -76,7 +76,11 @@ async function exportFromNotion (format) {
     // 创建任务
     while (true) {
       if (failCount >= 5) break;
-      await sleep(10);
+      let sleepS = 35
+      if(failCount>2){
+        sleepS = 10
+      }
+      await sleep(sleepS);
       let { data: { results: tasks } } = await retry(
         { times: 3, interval: 2000 },
         async () => post('getTasks', { taskIds: [taskId] })
