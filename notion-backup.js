@@ -78,7 +78,7 @@ async function exportFromNotion (format) {
       if (failCount >= 5) break;
       let sleepS = 35
       if(failCount>2){
-        sleepS = 10
+        sleepS = 20
       }
       await sleep(sleepS);
       let { data: { results: tasks } } = await retry(
