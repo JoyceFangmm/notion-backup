@@ -1,6 +1,8 @@
 # 自行更改记录
-**2026年6月1日**
-分支：develop_space_2用于workspace的导出
+**2026年6月1日**<br>
+- 分支：develop_space_2用于workspace的导出
+
+***
 
 **参考自 https://github.com/darobin/notion-backup 的工程**
 
