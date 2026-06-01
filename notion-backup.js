@@ -68,7 +68,8 @@ async function exportFromNotion (format) {
           },
           shouldExportComments: false,
           eventName: 'partitionedExportBlock',
-          spaceId: `${NOTION_SPACE_ID}`
+          spaceId: `${NOTION_SPACE_ID}`,
+          rootTaskId: uuidv4()
         },
         cellRouting: {
           spaceIds: [
