@@ -108,7 +108,7 @@ async function exportFromNotion (format) {
 
       let response = await retry(
         { times: 2, interval: 5000 },
-        async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
+        async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 20, type: 'unread_and_read' })
       );
 
       console.warn('数据获取成功', response.data, JSON.stringify(response.data));
