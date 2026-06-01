@@ -125,36 +125,37 @@ async function exportFromNotion (format) {
       for (const key in activity) {
         const el = activity[key];
         console.warn('el.value->', JSON.stringify(el.value));
-          if (el.value.type === 'export-completed') {
-            console.warn('el.value.type->', el.value.type);
-            let { edits } = el.value;
-            // eslint-disable-next-line guard-for-in
-            for (const k in edits) {
-              const it = edits[k];
-              if (it.type === 'export-completed') {
-                exportURL = it.link;
-                // 判断链接是否过期
-                const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
-                console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
-                const curr = Date.now();
-                if (Number(timestamp) <= curr) {
-                  console.warn('链接过期了，waiting...');
-                  exportURL = null;
-                  continue;
-                } else {
-                  break;
-                }
+        console.warn('el.value.value.type->', el.value.value.type, el.value.value.type === 'export-completed');
+        if (el.value.value.type === 'export-completed') {
+          console.warn('el.value.value.type->', el.value.value.type);
+          let { edits } = el.value.value;
+          // eslint-disable-next-line guard-for-in
+          for (const k in edits) {
+            const it = edits[k];
+            if (it.type === 'export-completed') {
+              exportURL = it.link;
+              // 判断链接是否过期
+              const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
+              console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
+              const curr = Date.now();
+              if (Number(timestamp) <= curr) {
+                console.warn('链接过期了，waiting...');
+                exportURL = null;
+                continue;
+              } else {
+                break;
               }
             }
-
-            if (exportURL) {
-              console.warn(`获取链接成功：${exportURL}`);
-              break;
-            } else {
-              console.warn(`未找到正确链接，继续for循环`);
-              continue;
-            }
           }
+
+          if (exportURL) {
+            console.warn(`获取链接成功：${exportURL}`);
+            break;
+          } else {
+            console.warn(`未找到正确链接，继续for循环`);
+            continue;
+          }
+        }
       }
 
       if (!exportURL) {
