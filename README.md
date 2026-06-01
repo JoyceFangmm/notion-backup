@@ -1,3 +1,7 @@
+# 自行更改记录
+**2026年6月1日**
+分支：develop_space_2用于workspace的导出
+
 **参考自 https://github.com/darobin/notion-backup 的工程**
 
 **⚠️⚠️⚠️ I am no longer maintaining this. ⚠️⚠️⚠️** I stopped using Notion, I don't like the direction that the product is headed in
