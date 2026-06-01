@@ -54,7 +54,7 @@ async function exportFromNotion (format) {
             id: `${NOTION_DATABASE_ID}`, // databse_id
             spaceId: `${NOTION_SPACE_ID}`
           },
-          recursive: true,
+          recursive: false,
           exportOptions: {
             exportType: format,
             timeZone: 'Asia/Shanghai',
@@ -68,6 +68,7 @@ async function exportFromNotion (format) {
           },
           shouldExportComments: false,
           eventName: 'partitionedExportBlock',
+          spaceId: `${NOTION_SPACE_ID}`,
           rootTaskId: uuidv4()
         },
         cellRouting: {
