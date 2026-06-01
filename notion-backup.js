@@ -125,14 +125,13 @@ async function exportFromNotion (format) {
       for (const key in activity) {
         const el = activity[key];
         console.warn('el.value->', JSON.stringify(el.value));
-        if (el.value.space_id === `${NOTION_SPACE_ID}`) {
           if (el.value.type === 'export-completed') {
             console.warn('el.value.type->', el.value.type);
             let { edits } = el.value;
             // eslint-disable-next-line guard-for-in
             for (const k in edits) {
               const it = edits[k];
-              if (it.type === 'export-completed' && it.space_id === `${NOTION_SPACE_ID}`) {
+              if (it.type === 'export-completed') {
                 exportURL = it.link;
                 // 判断链接是否过期
                 const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
@@ -156,7 +155,6 @@ async function exportFromNotion (format) {
               continue;
             }
           }
-        }
       }
 
       if (!exportURL) {
