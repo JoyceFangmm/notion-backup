@@ -40,6 +40,24 @@ async function sleep (seconds) {
   });
 }
 
+function isExpiredExportURL (exportURL) {
+  let parsed;
+  try {
+    parsed = new URL(exportURL);
+  }
+  catch (err) {
+    throw new Error(`Invalid export URL returned by Notion: ${exportURL}`);
+  }
+  let expirationTimestamp = parsed.searchParams.get('expirationTimestamp');
+  if (!expirationTimestamp) return false;
+  let expiration = Number(expirationTimestamp);
+  if (!Number.isFinite(expiration)) {
+    throw new Error(`Invalid expirationTimestamp returned by Notion: ${expirationTimestamp}`);
+  }
+  console.warn('expirationTimestamp:', expirationTimestamp);
+  return expiration <= Date.now();
+}
+
 
 // formats: markdown, html
 async function exportFromNotion (format) {
@@ -71,9 +89,8 @@ async function exportFromNotion (format) {
 
     let failCount = 0
       , exportURL
-      , hasSuccessed = false
     ;
-    // 创建任务
+    // Poll the specific task we just created; notification logs can contain stale export links.
     while (true) {
       if (failCount >= 5) break;
       await sleep(10);
@@ -88,93 +105,31 @@ async function exportFromNotion (format) {
         console.warn(`No task, waiting.`);
         continue;
       }
-      if (task.state === 'success') {
-        hasSuccessed = true;
-        break;
+      console.warn(`Task ${taskId} state: ${task.state}`);
+      if (task.state === 'failure') {
+        throw new Error(`Export task ${taskId} failed.`);
       }
-    }
-
-    if (!hasSuccessed) {
-      console.warn('No Download link');
-      return;
-    }
-
-    failCount = 0;
-    // 获取消息通知里面的下载链接
-    while (true) {
-      console.warn('Waiting for export to complete...');
-      if (failCount >= 5) break;
-      await sleep(20);
-
-      let response = await retry(
-        { times: 2, interval: 5000 },
-        async () => post('getNotificationLog', { spaceId: `${NOTION_SPACE_ID}`, size: 1, type: 'unread_and_read' })
-      );
-
-      console.warn('数据获取成功', response.data, JSON.stringify(response.data));
-
-      let { activity } = response.data.recordMap;
-
-      console.warn('activity->', activity, JSON.stringify(activity));
-
-      // eslint-disable-next-line guard-for-in
-      for (const key in activity) {
-        const el = activity[key];
-        console.warn('el.value->', el.value, JSON.stringify(el.value));
-        if (el.value.space_id === `${NOTION_SPACE_ID}`) {
-          if (el.value.type === 'export-completed') {
-            console.warn('el.value.type->', el.value.type);
-            let { edits } = el.value;
-            // eslint-disable-next-line guard-for-in
-            for (const k in edits) {
-              const it = edits[k];
-              if (it.type === 'export-completed' && it.space_id === `${NOTION_SPACE_ID}`) {
-                exportURL = it.link;
-                // 判断链接是否过期
-                const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
-                console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
-                const curr = Date.now();
-                if (Number(timestamp) <= curr) {
-                  console.warn('链接过期了，waiting...');
-                  exportURL = null;
-                  continue;
-                } else {
-                  break;
-                }
-              }
-            }
-
-            if (exportURL) {
-              console.warn(`获取链接成功：${exportURL}`);
-              break;
-            } else {
-              console.warn(`未找到正确链接，继续for循环`);
-              continue;
-            }
-          }
-        }
+      if (task.state !== 'success') {
+        continue;
       }
 
+      exportURL = task.status && task.status.exportURL;
       if (!exportURL) {
+        throw new Error(`Export task ${taskId} completed without status.exportURL.`);
+      }
+      if (isExpiredExportURL(exportURL)) {
+        exportURL = null;
         failCount++;
-        console.warn(`No link, waiting.`);
+        console.warn('Export URL is expired, waiting...');
         continue;
       }
 
-      const timestamp = exportURL.split('expirationTimestamp=')[1].split('&')[0];
-      console.warn('expirationTimestamp：', timestamp); // 输出：1767959286376
-      const curr = Date.now();
-      if (Number(timestamp) < curr) {
-        failCount++;
-        console.warn('链接过期了，waiting...');
-        continue;
-      } else {
-        break;
-      }
+      console.warn(`Got export URL for ${format} from task ${taskId}.`);
+      break;
     }
 
     if (!exportURL) {
-      throw new Error('最终未找到正确的链接');
+      throw new Error(`Could not get a valid export URL for ${format} from task ${taskId}.`);
     }
 
 
